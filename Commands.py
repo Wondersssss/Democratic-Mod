@@ -2,6 +2,9 @@ import discord
 from discord import Client, Intents, app_commands
 from Main import *
 
+# List of all commands, they're basically all the same with minor tweaks.
+# I made all the actions seperate to avoid confusion.
+
 @client.tree.command(name="Vote Timeout", description="Vote to timeout user.")
 @app_commands.describe(user="The user to timeout")
 @app_commands.checks.has_permissions(administrator=True)
@@ -13,7 +16,6 @@ async def voteTimeout(interaction: discord.Interaction, user: discord.Member):
     else:
         await interaction.response.send_message(f"{user.name} is already timed out!")
         print(f"ERROR: {user.name} is already timed out while timeout request was made.")
-
 
 @client.tree.command(name="Vote Kick", description="Vote to kick user.")
 @app_commands.describe(user="The user to kick")
@@ -78,3 +80,6 @@ async def voteUndeafen(interaction: discord.Interaction, user: discord.Member):
     else:
         await interaction.response.send_message(f"{user.name} is not deafened!")
         print(f"ERROR: {user.name} is not deafened while undeafen request was made.")
+
+
+

@@ -25,15 +25,14 @@ print("Bot clients initialised")
 
 VOTE_START_PATH: Final[str] = "sounds/voteStart.wav"
 
-optionList = ["time out", "timeout", "kick", "ban", "mute", "deafen", "unmute", "undeafen"]
-
 async def initiateVote(interaction: discord.Interaction, type: str, userTarget: discord.Member):
     if interaction.user.voice:
         try:
             # Voice channel connection logic
             channel = interaction.message.author.voice.channel
+            print(f"Attempting to join {channel.name}...")
             vc = await channel.connect(self_deaf=True)
-            print(f"Bot has joined {channel.name}, attempting to play the vote start sound...")
+            print(f"Joined {channel.name}, playing the vote start sound...")
             audio = discord.FFmpegAudio(VOTE_START_PATH)
             vc.play(audio, after=lambda e: print(f"Player error: {e}"))
             print("Bot has successfully played vote start audio!")
@@ -52,8 +51,11 @@ async def initiateVote(interaction: discord.Interaction, type: str, userTarget: 
 
 async def playAudio(file, vc: discord.VoiceClient, interaction: discord.Interaction):
     if interaction.user.voice and vc.is_connected:
+        print(f"Attempting to play {file}...")
         vc.play(file, after=lambda e: print(f"Player error: {e}"))
+        print(f"{file} played!")
     else:
+        print("ERROR: Bot or command caller isn't in VC")
         await interaction.response.send_message("Bot or command caller isn't in VC!")
 
 

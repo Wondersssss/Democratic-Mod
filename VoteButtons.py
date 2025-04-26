@@ -15,7 +15,7 @@ active_votes = {}  # Format: {message_id: {"yes": int, "no": int, "target": disc
 
 class VoteButtons(discord.ui.View):
     def __init__(self, target_user: discord.Member, type: str, vc: discord.VoiceClient, interaction: discord.Interaction):
-        super().__init__(timeout=20)  # 30-second timeout for the vote
+        super().__init__(timeout=20)  # 20-second timeout for the vote
         self.target_user = target_user
         self.yes_votes = 0
         self.no_votes = 0
@@ -46,36 +46,7 @@ class VoteButtons(discord.ui.View):
         )
         await interaction.message.edit(embed=embed)
 
-    async def voteAction(self):
-        match self.type:
-            case "timeout":
-                await self.target_user.timeout(datetime.delta(seconds=30*60), reason="Voted out by the public")
-                return "timed out"
-            case "time out":
-                await self.target_user.timeout(datetime.delta(seconds=30*60), reason="Voted out by the public")
-                return "timed out"
-            case "kick":
-                self.target_user.kick(reason="Voted out by the public")
-                return "kicked"
-            case "ban":
-                self.target_user.ban(reason="Voted out by the public")
-                return "banned"
-            case "mute":
-                self.target_user.edit(mute=True)
-                return "muted"
-            case "deafen":
-                self.target_user.edit(deafen=True)
-                return "deafened"
-            case "unmute":
-                self.target_user.edit(mute=False)
-                return "unmuted"
-            case "undeafen":
-                self.target_user.edit(deafen=False)
-                return "undeafened"
-            case _:
-                self.interaction.response.send_message("Invalid type was sent, try using /Help", ephemeral=True)
-
-    async def on_timeout(self):
+    async def on_vote_timeout(self):
         # Disable buttons when vote ends
         for item in self.children:
             item.disabled = True
@@ -84,12 +55,56 @@ class VoteButtons(discord.ui.View):
         # Determine outcome
         channel = self.message.channel
         
-        if self.yes_votes > self.no_votes:
+        if self.checkWinner(self):
             typeStr = self.voteAction(self)
             await channel.send(f"Vote passed! {self.target_user.display_name} will be {typeStr}.")
-            playAudio(discord.FFmpegAudio(VOTE_YES_PATH), self.vc, self.interaction)
+            playAudio(discord.FFmpegAudio(VOTE_SUCCESS_PATH), self.vc, self.interaction)
+            print(f"Vote succeeded against {self.target_user.name}")
         else:
             await channel.send(f"Vote failed. {self.target_user.display_name} will not be {typeStr}.")
-            playAudio(discord.FFmpegAudio(VOTE_NO_PATH), self.vc, self.interaction)
+            playAudio(discord.FFmpegAudio(VOTE_FAIL_PATH), self.vc, self.interaction)
+            print(f"Vote failed against {self.target_user.name}")
+
+    async def voteAction(self):
+        match self.type:
+            case "timeout":
+                await self.target_user.timeout(datetime.delta(seconds=30*60), reason="Voted out by the public")
+                print(f"{self.target_user.name} successfully timed out.")
+                return "timed out"
+            case "kick":
+                self.target_user.kick(reason="Voted out by the public")
+                print(f"{self.target_user.name} successfully kicked.")
+                return "kicked"
+            case "ban":
+                self.target_user.ban(reason="Voted out by the public")
+                print(f"{self.target_user.name} successfully banned.")
+                return "banned"
+            case "mute":
+                self.target_user.edit(mute=True)
+                print(f"{self.target_user.name} successfully muted.")
+                return "muted"
+            case "deafen":
+                self.target_user.edit(deafen=True)
+                print(f"{self.target_user.name} successfully deafened.")
+                return "deafened"
+            case "unmute":
+                self.target_user.edit(mute=False)
+                print(f"{self.target_user.name} successfully unmuted.")
+                return "unmuted"
+            case "undeafen":
+                self.target_user.edit(deafen=False)
+                print(f"{self.target_user.name} successfully undeafened.")
+                return "undeafened"
+            case _:
+                self.interaction.response.send_message("Invalid type was sent", ephemeral=True)
+
+    def checkWinner(self):
+        # Simulates TF2-like voting system
+        totalVotes = self.yes_votes + self.no_votes
+        percentage = (self.yes_votes / totalVotes) * 100
+        print(f"Percentage of vote: {percentage}%")
+        if percentage >= 60:
+            return True
+        return False
 
     
