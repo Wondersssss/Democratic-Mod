@@ -10,6 +10,10 @@ from discord import Client, Intents, app_commands
 from discord.ui import Button, View
 #========================
 
+# OTHER FILES -----------
+from VoteButtons import *
+#========================
+
 # GET TOKEN
 load_dotenv()
 TOKEN: Final[str] = os.getenv('DISCORD_TOKEN')
@@ -20,101 +24,72 @@ intents: Intents = Intents.all() # There's far too many specific intents to be e
 client: Client = Client(intents=intents)
 print("Bot clients initialised")
 
-# AUDIO FILES
-VOTE_FAIL_PATH = "sounds/voteFail.wav"
-VOTE_NO_PATH = "sounds/voteNo.wav"
-VOTE_START_PATH = "sounds/voteStart.wav"
-VOTE_SUCCESS_PATH = "sounds/voteSuccess.wav"
-VOTE_YES_PATH = "sounds/voteYes.wav"
+VOTE_START_PATH: Final[str] = "sounds/voteStart.wav"
 
-# Global vote tracking (consider using a database for persistence)
-active_votes = {}  # Format: {message_id: {"yes": int, "no": int, "target": discord.User}}
+optionList = ["time out", "timeout", "kick", "ban", "mute", "deafen", "unmute", "undeafen"]
 
-class VoteButtons(discord.ui.View):
-    def __init__(self, target_user: discord.User):
-        super().__init__(timeout=30)  # 30-second timeout for the vote
-        self.target_user = target_user
-        self.yes_votes = 0
-        self.no_votes = 0
-
-    @discord.ui.button(label="Yes", style=discord.ButtonStyle.green)
-    async def yes_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.yes_votes += 1
-        await interaction.response.send_message("You voted YES" , ephemeral=True)
-        await self.update_vote_message(interaction)
-
-    @discord.ui.button(label="No", style=discord.ButtonStyle.red)
-    async def no_button(self, interaction: discord.Interaction, button: discord.ui.Button):
-        self.no_votes += 1
-        await interaction.response.send_message("You voted NO", ephemeral=True)
-        await self.update_vote_message(interaction)
-
-    async def update_vote_message(self, interaction: discord.Interaction):
-        # Edit the original vote message to show current counts
-        embed = discord.Embed(
-            title=f"Vote to timeout {self.target_user.display_name}",
-            description=f"**Current Votes:**\n✅ Yes: {self.yes_votes}\n❌ No: {self.no_votes}",
-            color=discord.Color.orange()
-        )
-        await interaction.message.edit(embed=embed)
-
-    async def on_timeout(self):
-        # Disable buttons when vote ends
-        for item in self.children:
-            item.disabled = True
-        await self.message.edit(view=self)
-        
-        # Determine outcome
-        channel = self.message.channel
-        if self.yes_votes > self.no_votes:
-            await channel.send(f"Vote passed! {self.target_user.display_name} will be timed out.")
-            # Add your timeout logic here
-        else:
-            await channel.send(f"Vote failed. {self.target_user.display_name} will not be timed out.")
-
-async def initiateVote(interaction: discord.Interaction, type: str, userTarget: discord.User):
+async def initiateVote(interaction: discord.Interaction, type: str, userTarget: discord.Member):
     if interaction.user.voice:
         try:
             # Voice channel connection logic
             channel = interaction.message.author.voice.channel
             vc = await channel.connect(self_deaf=True)
+            print(f"Bot has joined {channel.name}, attempting to play the vote start sound...")
             audio = discord.FFmpegAudio(VOTE_START_PATH)
             vc.play(audio, after=lambda e: print(f"Player error: {e}"))
+            print("Bot has successfully played vote start audio!")
 
             # Create and send vote message
-            view = VoteButtons(userTarget)
-            vote_message = await interaction.channel.send(
-                f"Should we {type} {userTarget.mention}?",
-                view=view
-            )
+            view = VoteButtons(userTarget, type, vc, interaction)
+            vote_message = await interaction.channel.send(view=view)
             view.message = vote_message  # Store message reference
-            
-            return True
         except discord.errors.ClientException:
             await interaction.response.send_message("Couldn't join the voice channel.", ephemeral=True)
+            print("ERROR: Bot was unable to join vc")
     else:
         await interaction.response.send_message("You're not in a VC!", ephemeral=True)
-        return False
+        print("ERROR: User who invoked command is not in a VC")
 
-@client.tree.command(name="vote_timeout", description="Vote to timeout someone")
-@app_commands.describe(user="The user to timeout")
+
+@client.tree.command(name="Vote", description="Vote to punish user.")
+@app_commands.describe(user="The user to punish", action="Type of punishment")
 @app_commands.checks.has_permissions(administrator=True)
-async def voteTimeout(interaction: discord.Interaction, user: discord.User):
+async def vote(interaction: discord.Interaction, user: discord.Member, action: str):
+    # FIXME: ADD CHECK FOR MUTED/DEAFENED and vice versa
     await interaction.response.defer()
-    await initiateVote(interaction, "time out", user)
+    typeAction = action.lower().strip()
+    if typeAction in optionList:
+        if "-" in typeAction:
+            typeAction.replace("-", "")
+        await initiateVote(interaction, typeAction, user)
+        print(f"Starting up the {typeAction} vote against {user}...")
+    else:
+        await interaction.response.send_message("Type of punishment invalid. See /help for the list!", ephemeral=True)
+
+@client.tree.command(name="Help", description="Brief overview of the bot & types of punishment")
+async def help(interaction: discord.Interaction):
+    await interaction.response("Hello! I am the democratic bot, a friend to allow punishing members by voting." \
+    "\n\n Here's the list of types you can use for /Vote:" \
+    "\n- Kick" \
+    "\n- Ban" \
+    "\n- Time out" \
+    "\n- Mute" \
+    "\n- Deafen" \
+    "\n\n However only admins can call the command, have fun!")
 
 
+async def playAudio(file, vc: discord.VoiceClient, interaction: discord.Interaction):
+    if interaction.user.voice and vc.is_connected:
+        vc.play(file, after=lambda e: print(f"Player error: {e}"))
+    else:
+        await interaction.response.send_message("Bot or command caller isn't in VC!")
 
 
-    
-
-# ---------------------------
 
 # COMMAND SYNC
 @client.event
 async def on_ready():
     print(f"{client.user.name} is now online!")
-    
     print("Syncing commands...")
     try:
         synced = await client.tree.sync()
