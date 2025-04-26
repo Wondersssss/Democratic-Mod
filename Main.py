@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 # DISCORD ---------------
 import discord
 from discord import Client, Intents, app_commands
-from discord.ui import Button, View
 #========================
 
 # OTHER FILES -----------
@@ -49,33 +48,6 @@ async def initiateVote(interaction: discord.Interaction, type: str, userTarget: 
     else:
         await interaction.response.send_message("You're not in a VC!", ephemeral=True)
         print("ERROR: User who invoked command is not in a VC")
-
-
-@client.tree.command(name="Vote", description="Vote to punish user.")
-@app_commands.describe(user="The user to punish", action="Type of punishment")
-@app_commands.checks.has_permissions(administrator=True)
-async def vote(interaction: discord.Interaction, user: discord.Member, action: str):
-    # FIXME: ADD CHECK FOR MUTED/DEAFENED and vice versa
-    await interaction.response.defer()
-    typeAction = action.lower().strip()
-    if typeAction in optionList:
-        if "-" in typeAction:
-            typeAction.replace("-", "")
-        await initiateVote(interaction, typeAction, user)
-        print(f"Starting up the {typeAction} vote against {user}...")
-    else:
-        await interaction.response.send_message("Type of punishment invalid. See /help for the list!", ephemeral=True)
-
-@client.tree.command(name="Help", description="Brief overview of the bot & types of punishment")
-async def help(interaction: discord.Interaction):
-    await interaction.response("Hello! I am the democratic bot, a friend to allow punishing members by voting." \
-    "\n\n Here's the list of types you can use for /Vote:" \
-    "\n- Kick" \
-    "\n- Ban" \
-    "\n- Time out" \
-    "\n- Mute" \
-    "\n- Deafen" \
-    "\n\n However only admins can call the command, have fun!")
 
 
 async def playAudio(file, vc: discord.VoiceClient, interaction: discord.Interaction):
