@@ -1,3 +1,7 @@
+#FIXME: Add preventitive checks to make sure multiple votes can't happen per server
+#FIXME: Fix error "Command syncing unsuccessful: 'Client' object has no attribute 'tree'"
+#FIXME: Add test commands
+
 # TOKEN ----------------
 from typing import Final
 import os
@@ -71,5 +75,10 @@ async def on_ready():
     except Exception as e:
         print(f"Command syncing unsuccessful: {e}")
 
+def main():
+    client.run(token=TOKEN)
+
+if __name__ == '__main__':
+    main()
 
 
