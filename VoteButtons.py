@@ -1,9 +1,8 @@
 import discord
-from discord import Client, Intents, app_commands
-from discord.ui import Button, View
 from Main import *
 from typing import Final
 import datetime
+import time
 
 VOTE_SUCCESS_PATH: Final[str] = "sounds/voteSuccess.wav"
 VOTE_YES_PATH: Final[str] = "sounds/voteYes.wav"
@@ -64,6 +63,8 @@ class VoteButtons(discord.ui.View):
             await channel.send(f"Vote failed. {self.target_user.display_name} will not be {typeStr}.")
             playAudio(discord.FFmpegAudio(VOTE_FAIL_PATH), self.vc, self.interaction)
             print(f"Vote failed against {self.target_user.name}")
+        time.sleep(7)
+        self.vc.disconnect()
 
     async def voteAction(self):
         match self.type:
