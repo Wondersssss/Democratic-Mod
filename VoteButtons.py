@@ -65,6 +65,7 @@ class VoteButtons(discord.ui.View):
             print(f"Vote failed against {self.target_user.name}")
         time.sleep(7)
         self.vc.disconnect()
+        active_votes.remove(self.interaction.guild.id)
 
     async def voteAction(self):
         match self.type:

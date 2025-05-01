@@ -1,6 +1,6 @@
 import discord
 from discord import app_commands
-from Main import *
+from Main import tree, client, ADMIN_ONLY, initiateVote
 
 # List of all commands, they're basically all the same with minor tweaks.
 # I made all the actions seperate to avoid confusion.
@@ -82,6 +82,7 @@ async def voteUndeafen(interaction: discord.Interaction, user: discord.Member):
         print(f"ERROR: {user.name} is not deafened while undeafen request was made.")
 
 @tree.command(name="Toggle Public Permission", description="Toggles the permissions of the vote, meaning anyone can cast it")
+@app_commands.checks.has_permissions(administrator=True)
 async def togglePublicPerms(interaction: discord.Interaction):
     if ADMIN_ONLY:
         ADMIN_ONLY = False

@@ -1,6 +1,5 @@
-#FIXME: Add test commands
 #FIXME: Add option to disable admin perms for vote
-#FIXME: Remove server from active_votes when vote is complete
+#FIXME: Fix file mismanagement errors
 
 # TOKEN ----------------
 from typing import Final
@@ -14,7 +13,8 @@ from discord import Client, Intents, app_commands
 #========================
 
 # OTHER FILES -----------
-from VoteButtons import *
+import VoteButtons
+import Commands
 #========================
 
 # GET TOKEN
@@ -23,6 +23,7 @@ TOKEN: Final[str] = os.getenv('DISCORD_TOKEN')
 print(f"Bot token: {TOKEN}")
 
 ADMIN_ONLY = True
+active_votes = []
 
 # BOT SETUP
 intents: Intents = Intents.default()
@@ -38,14 +39,11 @@ VOTE_START_PATH: Final[str] = "sounds/voteStart.wav"
 async def initiateVote(interaction: discord.Interaction, type: str, userTarget: discord.Member):
     if interaction.guild_id in active_votes:
         await interaction.response.send_message("There's already an active vote in this server!", ephemeral=True)
+        print(f"Vote cancelled due to one ongoing in {interaction.guild.name}.")
         return
     
     # Store the active vote
-    active_votes[interaction.guild_id] = {
-        "type": type,
-        "target": userTarget.id,
-        "channel_id": interaction.channel_id
-    }
+    active_votes.append(interaction.guild.id)
 
     if interaction.user.voice:
         try:
