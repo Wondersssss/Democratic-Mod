@@ -14,7 +14,8 @@ from discord import Client, Intents, app_commands
 
 # OTHER FILES -----------
 import VoteButtons
-import Commands
+from Commands import setupCommands
+from TestCommands import setupTestCommands
 #========================
 
 # GET TOKEN
@@ -85,6 +86,8 @@ async def on_ready():
     print(f"{client.user.name} is now online!")
     print("Syncing commands...")
     try:
+        setupCommands(tree)
+        setupTestCommands(tree)
         synced = await tree.sync()
         print(f"All {len(synced)} commands successfully synced!")
     except Exception as e:
