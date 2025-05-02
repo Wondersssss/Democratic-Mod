@@ -15,7 +15,7 @@ def setupCommands(tree):
     @app_commands.describe(user="The user to timeout")
     async def voteTimeout(interaction: discord.Interaction, user: discord.Member):
         if ADMIN_ONLY and not interaction.user.guild_permissions.administrator:
-            interaction.response.send_message("Permission is currently admin only.")
+            interaction.response.send_message("Permission is currently admin only.", ephemeral=True)
             print(f"Vote was cast but {interaction.user.name} is not an admin.")
             return
         if not user.is_timed_out():
@@ -23,14 +23,14 @@ def setupCommands(tree):
             await initiateVote(interaction, "timeout", user)
             print(f"Starting up the timeout vote against {user}...")
         else:
-            await interaction.response.send_message(f"{user.name} is already timed out!")
+            await interaction.response.send_message(f"{user.name} is already timed out!", ephemeral=True)
             print(f"ERROR: {user.name} is already timed out while timeout request was made.")
 
     @tree.command(name="vote-kick", description="Vote to kick user.")
     @app_commands.describe(user="The user to kick")
     async def voteKick(interaction: discord.Interaction, user: discord.Member):
         if ADMIN_ONLY and not interaction.user.guild_permissions.administrator:
-            interaction.response.send_message("Permission is currently admin only.")
+            interaction.response.send_message("Permission is currently admin only.", ephemeral=True)
             print(f"Vote was cast but {interaction.user.name} is not an admin.")
             return
         await interaction.response.defer()
@@ -41,7 +41,7 @@ def setupCommands(tree):
     @app_commands.describe(user="The user to ban")
     async def voteBan(interaction: discord.Interaction, user: discord.Member):
         if ADMIN_ONLY and not interaction.user.guild_permissions.administrator:
-            interaction.response.send_message("Permission is currently admin only.")
+            interaction.response.send_message("Permission is currently admin only.", ephemeral=True)
             print(f"Vote was cast but {interaction.user.name} is not an admin.")
             return
         await interaction.response.defer()
@@ -52,7 +52,7 @@ def setupCommands(tree):
     @app_commands.describe(user="The user to mute")
     async def voteMute(interaction: discord.Interaction, user: discord.Member):
         if ADMIN_ONLY and not interaction.user.guild_permissions.administrator:
-            interaction.response.send_message("Permission is currently admin only.")
+            interaction.response.send_message("Permission is currently admin only.", ephemeral=True)
             print(f"Vote was cast but {interaction.user.name} is not an admin.")
             return
         if not user.voice.mute:
@@ -60,14 +60,14 @@ def setupCommands(tree):
             await initiateVote(interaction, "mute", user)
             print(f"Starting up the mute vote against {user}...")
         else:
-            await interaction.response.send_message(f"{user.name} is already muted!")
+            await interaction.response.send_message(f"{user.name} is already muted!", ephemeral=True)
             print(f"ERROR: {user.name} is already muted while mute request was made.")
 
     @tree.command(name="vote-unmute", description="Vote to unmute user.")
     @app_commands.describe(user="The user to unmute")
     async def voteUnmute(interaction: discord.Interaction, user: discord.Member):
         if ADMIN_ONLY and not interaction.user.guild_permissions.administrator:
-            interaction.response.send_message("Permission is currently admin only.")
+            interaction.response.send_message("Permission is currently admin only.", ephemeral=True)
             print(f"Vote was cast but {interaction.user.name} is not an admin.")
             return
         if user.voice.mute:
@@ -75,14 +75,14 @@ def setupCommands(tree):
             await initiateVote(interaction, "unmute", user)
             print(f"Starting up the unmute vote against {user}...")
         else:
-            await interaction.response.send_message(f"{user.name} is not muted!")
+            await interaction.response.send_message(f"{user.name} is not muted!", ephemeral=True)
             print(f"ERROR: {user.name} is not muted while unmute request was made.")
 
     @tree.command(name="vote-deafen", description="Vote to deafen user.")
     @app_commands.describe(user="The user to deafen")
     async def voteDeafen(interaction: discord.Interaction, user: discord.Member):
         if ADMIN_ONLY and not interaction.user.guild_permissions.administrator:
-            interaction.response.send_message("Permission is currently admin only.")
+            interaction.response.send_message("Permission is currently admin only.", ephemeral=True)
             print(f"Vote was cast but {interaction.user.name} is not an admin.")
             return
         if not user.voice.deaf:
@@ -90,14 +90,14 @@ def setupCommands(tree):
             await initiateVote(interaction, "deafen", user)
             print(f"Starting up the deafen vote against {user}...")
         else:
-            await interaction.response.send_message(f"{user.name} is already deafened!")
+            await interaction.response.send_message(f"{user.name} is already deafened!", ephemeral=True)
             print(f"ERROR: {user.name} is already deafened while deafen request was made.")
 
     @tree.command(name="vote-undeafen", description="Vote to undeafen user.")
     @app_commands.describe(user="The user to undeafen")
     async def voteUndeafen(interaction: discord.Interaction, user: discord.Member):
         if ADMIN_ONLY and not interaction.user.guild_permissions.administrator:
-            interaction.response.send_message("Permission is currently admin only.")
+            interaction.response.send_message("Permission is currently admin only.", ephemeral=True)
             print(f"Vote was cast but {interaction.user.name} is not an admin.")
             return
         if user.voice.deaf:
@@ -105,7 +105,7 @@ def setupCommands(tree):
             await initiateVote(interaction, "undeafen", user)
             print(f"Starting up the undeafen vote against {user}...")
         else:
-            await interaction.response.send_message(f"{user.name} is not deafened!")
+            await interaction.response.send_message(f"{user.name} is not deafened!", ephemeral=True)
             print(f"ERROR: {user.name} is not deafened while undeafen request was made.")
 
     @tree.command(name="toggle-public-permission", description="Toggles the permissions of the vote, meaning anyone can cast it")
