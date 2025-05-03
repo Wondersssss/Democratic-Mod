@@ -1,63 +1,83 @@
-# Main.py
 from typing import Final
 import os
 from dotenv import load_dotenv
 import discord
-from discord import Client, Intents, app_commands
+from discord import Intents
 from discord.ext import commands
-from VoteButtons import VoteButtons
+import VoteButtons
 
-# Load token
+
+# GET TOKEN
 load_dotenv()
 TOKEN: Final[str] = os.getenv('DISCORD_TOKEN')
+print(f"Bot token: {TOKEN}")
 
-class VoteBot(commands.Bot):
-    def __init__(self):
-        intents = Intents.default()
-        intents.message_content = True
-        intents.voice_states = True
-        super().__init__(command_prefix='!', intents=intents)
-        self.active_votes = []
-        self.ADMIN_ONLY = True
-        self.VOTE_START_PATH = "sounds/voteStart.wav"
+active_votes = []
 
-    async def initiate_vote(self, interaction: discord.Interaction, vote_type: str, target_user: discord.Member):
-        if interaction.guild_id in self.active_votes:
-            await interaction.response.send_message("There's already an active vote in this server!", ephemeral=True)
-            return False
+# BOT SETUP
+intents= discord.Intents.all()
+client = commands.Bot(command_prefix="!", intents=intents)
 
-        if not interaction.user.voice:
-            await interaction.response.send_message("You must be in a voice channel to start a vote!", ephemeral=True)
-            return False
+print("Bot intents initialised!")
 
+VOTE_START_PATH: Final[str] = "sounds/voteStart.wav"
+
+async def initiateVote(interaction: discord.Interaction, type: str, userTarget: discord.Member):
+    if interaction.guild_id in active_votes:
+        await interaction.followup.send("There's already an active vote in this server!", ephemeral=True)
+        print(f"Vote cancelled due to one ongoing in {interaction.guild.name}.")
+        return
+    
+    active_votes.append(interaction.guild.id)
+
+    if interaction.user.voice:
         try:
             channel = interaction.user.voice.channel
+            print(f"Attempting to join {channel.name}...")
             vc = await channel.connect(self_deaf=True)
-            audio = discord.FFmpegPCMAudio(self.VOTE_START_PATH)
-            vc.play(audio)
-            
-            view = VoteButtons(self, target_user, vote_type, vc, interaction)
-            await interaction.response.send_message(f"Starting vote to {vote_type} {target_user.display_name}...")
-            view.message = await interaction.original_response()
-            self.active_votes.append(interaction.guild_id)
-            return True
-        except Exception as e:
-            print(f"Error starting vote: {e}")
-            await interaction.response.send_message("Failed to start vote", ephemeral=True)
-            return False
+            await playAudio(VOTE_START_PATH, vc, interaction)
 
-    async def on_ready(self):
-        print(f'Logged in as {self.user}')
-        await self.load_extension('cogs.vote_commands')
-        await self.load_extension('cogs.test_commands')
-        
-        try:
-            synced = await self.tree.sync()
-            print(f"Synced {len(synced)} commands")
-        except Exception as e:
-            print(f"Error syncing commands: {e}")
+            view = VoteButtons.VoteButtons(userTarget, type, vc, interaction)
+            vote_message = await interaction.channel.send(view=view)
+            view.message = vote_message
+        except discord.errors.ClientException:
+            await interaction.followup.send("Couldn't join the voice channel.", ephemeral=True)
+            print("ERROR: Bot was unable to join vc")
+    else:
+        await interaction.followup.send("You're not in a VC!", ephemeral=True)
+        print("ERROR: User who invoked command is not in a VC")
 
-bot = VoteBot()
+async def playAudio(file, vc: discord.VoiceClient, interaction: discord.Interaction):
+    if vc.is_connected():
+        print(f"Attempting to play {file}...")
+        audio = discord.FFmpegPCMAudio(file)
+        vc.play(audio, after=lambda e: print(f"Player error: {e}") if e else None)
+        print(f"{file} played!")
+    else:
+        print("ERROR: Bot isn't in VC")
+        await interaction.followup.send("Bot isn't in VC!", ephemeral=True)
+
+async def load_extensions():
+    for filename in os.listdir("./cogs"):
+        if filename.endswith(".py") and not filename.startswith("_"):
+            try:
+                await client.load_extension(f"cogs.{filename[:-3]}")
+                print(f"Loaded cog: {filename}")
+            except Exception as e:
+                print(f"Failed to load cog {filename}: {e}")
+
+@client.event
+async def on_ready():
+    print(f"{client.user.name} is now online!")
+    print("Syncing commands...")
+    await load_extensions()
+    
+    try:        
+        # Sync commands
+        synced = await client.tree.sync()
+        print(f"Synced {len(synced)} commands")
+    except Exception as e:
+        print(f"Error syncing commands: {e}")
 
 if __name__ == '__main__':
-    bot.run(TOKEN)
+    client.run(TOKEN)
