@@ -5,7 +5,12 @@ import discord
 from discord import Intents
 from discord.ext import commands
 import VoteButtons
+import asyncio
+import AudioPlayer
 
+# Constants
+CONNECTION_TIMEOUT = 30  # seconds
+MAX_RETRIES = 2
 
 # GET TOKEN
 load_dotenv()
@@ -15,10 +20,10 @@ print(f"Bot token: {TOKEN}")
 active_votes = []
 
 # BOT SETUP
-intents= discord.Intents.all()
+intents = discord.Intents.all()
 client = commands.Bot(command_prefix="!", intents=intents)
 
-print("Bot intents initialised!")
+print("Bot intents initialized!")
 
 VOTE_START_PATH: Final[str] = "sounds/voteStart.wav"
 
@@ -30,32 +35,51 @@ async def initiateVote(interaction: discord.Interaction, type: str, userTarget: 
     
     active_votes.append(interaction.guild.id)
 
-    if interaction.user.voice:
-        try:
-            channel = interaction.user.voice.channel
-            print(f"Attempting to join {channel.name}...")
-            vc = await channel.connect(self_deaf=True)
-            await playAudio(VOTE_START_PATH, vc, interaction)
-
-            view = VoteButtons.VoteButtons(userTarget, type, vc, interaction)
-            vote_message = await interaction.channel.send(view=view)
-            view.message = vote_message
-        except discord.errors.ClientException:
-            await interaction.followup.send("Couldn't join the voice channel.", ephemeral=True)
-            print("ERROR: Bot was unable to join vc")
-    else:
+    if not interaction.user.voice:
         await interaction.followup.send("You're not in a VC!", ephemeral=True)
         print("ERROR: User who invoked command is not in a VC")
+        active_votes.remove(interaction.guild.id)
+        return
 
-async def playAudio(file, vc: discord.VoiceClient, interaction: discord.Interaction):
-    if vc.is_connected():
-        print(f"Attempting to play {file}...")
-        audio = discord.FFmpegPCMAudio(file)
-        vc.play(audio, after=lambda e: print(f"Player error: {e}") if e else None)
-        print(f"{file} played!")
-    else:
-        print("ERROR: Bot isn't in VC")
-        await interaction.followup.send("Bot isn't in VC!", ephemeral=True)
+    vc = None
+    try:
+        # Initialize voice client with retry logic
+        for attempt in range(MAX_RETRIES):
+            try:
+                vc = await asyncio.wait_for(
+                    interaction.user.voice.channel.connect(self_deaf=True),
+                    timeout=CONNECTION_TIMEOUT
+                )
+                print(f"Connected to {interaction.user.voice.channel}!")
+                break
+            except asyncio.TimeoutError:
+                if attempt == MAX_RETRIES - 1:
+                    raise
+                print(f"Connection timeout, retrying... ({attempt + 1}/{MAX_RETRIES})")
+                await asyncio.sleep(1)
+        
+        # Play audio
+        await AudioPlayer.playAudio(VOTE_START_PATH, vc, interaction)
+        
+        # Create vote
+        view = VoteButtons.VoteButtons(userTarget, type, vc, interaction)
+        vote_message = await interaction.channel.send(view=view)
+        view.message = vote_message
+        
+    except asyncio.TimeoutError:
+        await interaction.followup.send("Connection to voice channel timed out after multiple attempts.", ephemeral=True)
+        print("ERROR: Voice connection timed out")
+    except discord.ClientException as e:
+        await interaction.followup.send(f"Voice connection error: {str(e)}", ephemeral=True)
+        print(f"ERROR: Voice connection failed - {str(e)}")
+    except Exception as e:
+        await interaction.followup.send(f"An unexpected error occurred: {type(e).__name__}", ephemeral=True)
+        print(f"ERROR: Unexpected error in initiateVote - {type(e).__name__}: {str(e)}")
+    finally:
+        if interaction.guild_id in active_votes:
+            active_votes.remove(interaction.guild.id)
+        if vc and vc.is_connected():
+            await vc.disconnect()
 
 async def load_extensions():
     for filename in os.listdir("./cogs"):
@@ -73,7 +97,6 @@ async def on_ready():
     await load_extensions()
     
     try:        
-        # Sync commands
         synced = await client.tree.sync()
         print(f"Synced {len(synced)} commands")
     except Exception as e:

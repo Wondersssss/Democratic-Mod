@@ -3,7 +3,8 @@ from typing import Final
 import datetime
 import time
 import asyncio
-from Main import playAudio, active_votes
+from Main import active_votes
+import AudioPlayer
 
 VOTE_SUCCESS_PATH: Final[str] = "sounds/voteSuccess.wav"
 VOTE_YES_PATH: Final[str] = "sounds/voteYes.wav"
@@ -38,12 +39,12 @@ class VoteButtons(discord.ui.View):
             await self.message.channel.send(
                 f"Vote passed! {self.target_user.display_name} will be {action_result}."
             )
-            await playAudio(VOTE_SUCCESS_PATH, self.vc, self.interaction)
+            self.vc = await AudioPlayer.playAudio(VOTE_SUCCESS_PATH, self.vc, self.interaction)
         else:
             await self.message.channel.send(
                 f"Vote failed. {self.target_user.display_name} will not be {self.vote_type}."
             )
-            await playAudio(VOTE_FAIL_PATH, self.vc, self.interaction)
+            self.vc = await AudioPlayer.playAudio(VOTE_FAIL_PATH, self.vc, self.interaction)
         
         # Clean up
         await asyncio.sleep(7)
@@ -103,7 +104,7 @@ class VoteButtons(discord.ui.View):
             
         self.people_voted.add(interaction.user.id)
         self.yes_votes += 1
-        await playAudio(VOTE_YES_PATH, self.vc, interaction)
+        self.vc = await AudioPlayer.playAudio(VOTE_YES_PATH, self.vc, interaction)
         await interaction.response.send_message("You voted YES!", ephemeral=True)
         await self.update_vote_message()
 
@@ -116,7 +117,7 @@ class VoteButtons(discord.ui.View):
             
         self.people_voted.add(interaction.user.id)
         self.no_votes += 1
-        await playAudio(VOTE_NO_PATH, self.vc, interaction)
+        self.vc = await AudioPlayer.playAudio(VOTE_NO_PATH, self.vc, interaction)
         await interaction.response.send_message("You voted NO!", ephemeral=True)
         await self.update_vote_message()
 

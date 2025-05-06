@@ -1,7 +1,6 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-import datetime
 from Main import initiateVote
 
 # List of all commands, they're basically all the same with minor tweaks, EXCEPT the admin settings at the bottom
@@ -119,20 +118,27 @@ class Commands(commands.Cog):
 
     @app_commands.command(name="toggle-public-permission", description="Toggles the permissions of the vote, meaning anyone can cast it")
     @app_commands.checks.has_permissions(administrator=True)
-
     async def togglePublicPerms(self, interaction: discord.Interaction):
-        if self.ADMIN_ONLY:
-            self.ADMIN_ONLY = False
-        else:
-            self.ADMIN_ONLY = True
-        await interaction.response.send_message(f"Public permissions to vote are now set to {not self.ADMIN_ONLY}!")
-        print(f"Public permission now set to {not self.ADMIN_ONLY}.")
+        await interaction.response.defer()
+        self.ADMIN_ONLY = not self.ADMIN_ONLY
+        await interaction.followup.send(f"Public permissions to vote are now set to {self.ADMIN_ONLY}!")
+        print(f"Public permission now set to {self.ADMIN_ONLY}.")
 
     @app_commands.command(name="view-public-permission", description="View the current status of public permission")
     
     async def viewPublicPerms(self, interaction: discord.Interaction):
         await interaction.response.send_message(f"Public permission to vote is set to {not self.ADMIN_ONLY}")
         print(f"Public permission is currently {not self.ADMIN_ONLY}.")
+
+    @togglePublicPerms.error
+    async def toggle_perms_error(self, interaction: discord.Interaction, error):
+        if isinstance(error, app_commands.MissingPermissions):
+            # Check if we can still respond to the interaction
+            if not interaction.response.is_done():
+                await interaction.response.send_message("You don't have permission to do this!", ephemeral=True)
+            else:
+                # If interaction is already deferred/responded, use followup
+                await interaction.followup.send("You don't have permission to do this!", ephemeral=True)
 
 async def setup(client: commands.Bot):
     await client.add_cog(Commands(client))
