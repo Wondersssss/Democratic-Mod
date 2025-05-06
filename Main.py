@@ -8,6 +8,8 @@ import VoteButtons
 import asyncio
 import AudioPlayer
 
+#lil comment to test discord and github connecting
+
 # Constants
 CONNECTION_TIMEOUT = 30  # seconds
 MAX_RETRIES = 2
